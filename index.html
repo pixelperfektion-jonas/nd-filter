@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>ND-Filter Rechner</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background:#1e1e1e; color:#e0e0e0; }
+    h2 { margin-bottom: 1em; color:#fff; }
+    .row { margin-bottom: 15px; display:flex; align-items:center; }
+    label { width: 120px; }
+    select, button { padding: 8px 12px; border-radius:6px; border:none; font-size:14px; }
+    select { background:#2c2c2c; color:#e0e0e0; }
+    button { background:#3a3a3a; color:#fff; cursor:pointer; transition:background .2s; margin-left:8px; }
+    button:hover { background:#555; }
+    .lock { cursor:pointer; padding:5px 10px; margin-left:8px; border-radius:6px; border:1px solid #666; }
+    .lock.locked { background:#4A573E; color:#fff; border-color:#4A573E; }
+    .result { margin-top:25px; padding:15px; background:#2c2c2c; border-radius:10px; color:#fff; }
+    ul { margin:0; padding-left:20px; }
+    li { margin-bottom:4px; }
+  </style>
+</head>
+<body>
+  <h2>ND-Filter Rechner</h2>
+  
+  <div class="row">
+    <label>ISO:</label>
+    <select id="iso">
+      <option value="200">200</option>
+      <option value="400">400</option>
+      <option value="800">800</option>
+    </select>
+    <button class="lock" id="lock-iso">Sperren</button>
+  </div>
+
+  <div class="row">
+    <label>Verschluss:</label>
+    <select id="shutter"></select>
+    <button class="lock" id="lock-shutter">Sperren</button>
+  </div>
+
+  <div class="row">
+    <label>Blende:</label>
+    <select id="aperture"></select>
+    <button class="lock" id="lock-aperture">Sperren</button>
+  </div>
+
+  <div class="row">
+    <label>Licht (EV100):</label>
+    <select id="ev">
+      <option value="16">Sehr hell (Schnee/Meer)</option>
+      <option value="15">Sonnig</option>
+      <option value="14">Leicht bewölkt</option>
+      <option value="13">Schatten/Hell bewölkt</option>
+      <option value="12">Bewölkt</option>
+      <option value="10">Stark bewölkt/Regen</option>
+      <option value="8">Sonnenuntergang</option>
+      <option value="4">Dämmerung</option>
+    </select>
+  </div>
+
+  <button onclick="calculate()">Berechnen</button>
+
+  <div class="result" id="result"></div>
+
+<script>
+const shutterOptions = ["1/1000","1/500","1/250","1/125","1/60","1/30","1/15","1/8","1/4","1/2","1"];
+const apertureOptions = [1.7,2,2.8,4,5.6,8,11,16,22];
+const ndMap = {1:"ND2",2:"ND4",3:"ND8",4:"ND16",5:"ND32",6:"ND64",7:"ND128",8:"ND256",9:"ND512",10:"ND1024"};
+
+function fillSelects(){
+  const shutterSel=document.getElementById('shutter');
+  shutterOptions.forEach(s=>{
+    let opt=document.createElement('option');
+    opt.value=s; opt.text=s; shutterSel.appendChild(opt);
+  });
+  const apertureSel=document.getElementById('aperture');
+  apertureOptions.forEach(a=>{
+    let opt=document.createElement('option');
+    opt.value=a; opt.text="f/"+a; apertureSel.appendChild(opt);
+  });
+}
+
+fillSelects();
+
+document.querySelectorAll('.lock').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    btn.classList.toggle('locked');
+    if(btn.classList.contains('locked')){
+      btn.textContent = 'Gesperrt';
+    } else {
+      btn.textContent = 'Sperren';
+    }
+    calculate();
+  });
+});
+
+function shutterToSec(s){
+  if(s.includes('/')){ let parts=s.split('/'); return parseFloat(parts[0])/parseFloat(parts[1]); }
+  return parseFloat(s);
+}
+
+function secToShutter(sec){
+  for (let s of shutterOptions){
+    if(Math.abs(shutterToSec(s)-sec) < 0.0001) return s;
+  }
+  return null;
+}
+
+function evFromSettings(N,t){
+  return Math.log2((N*N)/t);
+}
+
+function roundStops(stops){
+  return Math.max(0, Math.round(stops));
+}
+
+function ndLabel(stops){
+  return ndMap[stops] || "ND"+Math.pow(2,stops);
+}
+
+function calculate(){
+  const iso=parseInt(document.getElementById('iso').value);
+  let shutter=shutterToSec(document.getElementById('shutter').value);
+  let aperture=parseFloat(document.getElementById('aperture').value);
+  const ev100=parseInt(document.getElementById('ev').value);
+
+  const evScene=ev100+Math.log2(iso/100);
+
+  const lockedISO=document.getElementById('lock-iso').classList.contains('locked');
+  const lockedShutter=document.getElementById('lock-shutter').classList.contains('locked');
+  const lockedAperture=document.getElementById('lock-aperture').classList.contains('locked');
+
+  let html="<h3>Ergebnis</h3>";
+
+  if(lockedISO && lockedShutter && !lockedAperture){
+    let N = Math.sqrt(shutter * Math.pow(2, evScene));
+    let nearest = apertureOptions.reduce((prev,curr)=>Math.abs(curr-N)<Math.abs(prev-N)?curr:prev);
+    document.getElementById('aperture').value = nearest;
+    let evSet=evFromSettings(nearest,shutter);
+    let diff=evScene-evSet;
+    let stops=roundStops(diff);
+    html += `<p>Empfohlene Blende: f/${nearest} (${stops>0?ndLabel(stops):"kein ND nötig"})</p>`;
+  } else if(lockedISO && lockedAperture && !lockedShutter){
+    let t = (aperture*aperture)/Math.pow(2, evScene);
+    let nearest = shutterOptions.reduce((prev,curr)=>Math.abs(shutterToSec(curr)-t)<Math.abs(shutterToSec(prev)-t)?curr:prev);
+    document.getElementById('shutter').value = nearest;
+    let evSet=evFromSettings(aperture,shutterToSec(nearest));
+    let diff=evScene-evSet;
+    let stops=roundStops(diff);
+    html += `<p>Empfohlene Verschlusszeit: ${nearest} (${stops>0?ndLabel(stops):"kein ND nötig"})</p>`;
+  } else if(lockedShutter && lockedAperture && !lockedISO){
+    let evSet=evFromSettings(aperture,shutter);
+    let diff=evScene-evSet;
+    let stops=roundStops(diff);
+    html += `<p>Benötigter ND: ${stops>0?ndLabel(stops):"kein ND nötig"}</p>`;
+  } else {
+    let evSet=evFromSettings(aperture,shutter);
+    let diff=evScene-evSet;
+    let stops=roundStops(diff);
+    html += `<p>EV Szene: ${evScene.toFixed(2)}, EV Settings: ${evSet.toFixed(2)}<br>Benötigter ND: ${stops>0?ndLabel(stops):"kein ND nötig"}</p>`;
+  }
+
+  document.getElementById('result').innerHTML=html;
+}
+</script>
+</body>
+</html>
