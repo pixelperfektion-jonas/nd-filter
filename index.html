@@ -4,25 +4,82 @@
   <meta charset="UTF-8">
   <title>ND-Filter Rechner</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background:#1e1e1e; color:#e0e0e0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      background:#1e1e1e;
+      color:#e0e0e0;
+    }
     h2 { margin-bottom: 1em; color:#fff; }
-    .row { margin-bottom: 15px; display:flex; align-items:center; flex-wrap:wrap; }
-    label { width: 120px; min-width:120px; margin-bottom:5px; }
-    select, button { padding: 10px 12px; border-radius:6px; border:none; font-size:14px; }
-    select { background:#2c2c2c; color:#e0e0e0; flex:1; }
-    button { background:#3a3a3a; color:#fff; cursor:pointer; transition:background .2s; margin-left:8px; }
+    
+    .row {
+      margin-bottom: 15px;
+      display:flex;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    label {
+      width: 120px;
+      min-width:120px;
+      margin-bottom:5px;
+    }
+    select, button {
+      padding: 10px 12px;
+      border-radius:6px;
+      border:none;
+      font-size:14px;
+    }
+    select {
+      background:#2c2c2c;
+      color:#e0e0e0;
+      flex:1;
+    }
+    button {
+      background:#3a3a3a;
+      color:#fff;
+      cursor:pointer;
+      transition:background .2s;
+      margin-left:8px;
+    }
     button:hover { background:#555; }
-    .lock { cursor:pointer; padding:5px 10px; margin-left:8px; border-radius:6px; border:1px solid #666; }
-    .lock.locked { background:#4A573E; color:#fff; border-color:#4A573E; }
-    .result { margin-top:25px; padding:15px; background:#2c2c2c; border-radius:10px; color:#fff; }
+    .lock {
+      cursor:pointer;
+      padding:5px 10px;
+      margin-left:8px;
+      border-radius:6px;
+      border:1px solid #666;
+    }
+    .lock.locked {
+      background:#4A573E;
+      color:#fff;
+      border-color:#4A573E;
+    }
+    .result {
+      margin-top:25px;
+      padding:15px;
+      background:#2c2c2c;
+      border-radius:10px;
+      color:#fff;
+    }
     ul { margin:0; padding-left:20px; }
     li { margin-bottom:4px; }
 
     /* Mobile Styles */
     @media (max-width:600px){
-      .row { flex-direction:column; align-items:flex-start; }
-      label { width:100%; }
-      select, button { width:100%; margin:5px 0; }
+      .row {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      label {
+        width:100%;
+      }
+      select, button {
+        width:100%;
+        margin:5px 0;
+      }
+      button.lock {
+        width:100%;
+      }
     }
   </style>
 </head>
@@ -33,10 +90,10 @@
     <label>ISO (Film):</label>
     <select id="iso">
       <option value="200">200</option>
-      <option value="400">400</option>
+      <option value="400" selected>400</option>
       <option value="800">800</option>
     </select>
-    <!-- kein Lock-Button mehr für ISO -->
+    <!-- Kein Lock-Button mehr für ISO -->
   </div>
 
   <div class="row">
@@ -104,13 +161,6 @@ document.querySelectorAll('.lock').forEach(btn=>{
 function shutterToSec(s){
   if(s.includes('/')){ let parts=s.split('/'); return parseFloat(parts[0])/parseFloat(parts[1]); }
   return parseFloat(s);
-}
-
-function secToShutter(sec){
-  for (let s of shutterOptions){
-    if(Math.abs(shutterToSec(s)-sec) < 0.0001) return s;
-  }
-  return null;
 }
 
 function evFromSettings(N,t){
