@@ -23,7 +23,7 @@
   .input-line select { flex:1 1 auto; }
   .input-line .lock { margin-left:0; }
     label { width:140px; min-width:140px; margin:0; font-weight:600; letter-spacing:.5px; font-size:.85rem; text-transform:uppercase; color:#cfcfcf; }
-    select, button { padding: 12px 14px; border-radius:8px; border:none; font-size:14px; }
+    select, button { padding: 12px; border-radius:8px; border:none; font-size:14px; }
     select {
       background:#2c2c2c;
       color:#e0e0e0;
@@ -45,8 +45,13 @@
       padding:5px 10px;
       margin-left:8px;
       border-radius:6px;
-      border:1px solid #666;
       flex:0 0 auto;
+      width:92px; /* fixed width to avoid layout shift */
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-sizing:border-box;
+      white-space:nowrap;
     }
     .lock.locked {
       background:#4A573E;
@@ -76,9 +81,15 @@
       .row > select, .row > button { width:100%; margin-left:0; }
       .input-line { flex-direction:row; width:100%; }
       .input-line select { flex:1 1 auto; }
-      .input-line .lock { width:auto; flex:0 0 auto; }
+  /* keep fixed width also on mobile */
+  .input-line .lock { flex:0 0 auto; }
       button { min-height:50px; }
     }
+      select:disabled {
+        opacity:.45;
+        cursor:not-allowed;
+        background:#252525;
+      }
   </style>
 </head>
 <body>
@@ -96,14 +107,13 @@
       <option value="400">400</option>
       <option value="800">800</option>
     </select>
-    <button class="lock" id="lock-iso">Sperren</button>
   </div>
 
   <div class="row">
     <label>Verschluss:</label>
     <div class="input-line">
       <select id="shutter"></select>
-      <button class="lock" id="lock-shutter">Sperren</button>
+      <button class="lock" id="lock-shutter" data-target="shutter">Sperren</button>
     </div>
   </div>
 
@@ -111,7 +121,7 @@
     <label>Blende:</label>
     <div class="input-line">
       <select id="aperture"></select>
-      <button class="lock" id="lock-aperture">Sperren</button>
+      <button class="lock" id="lock-aperture" data-target="aperture">Sperren</button>
     </div>
   </div>
 
@@ -163,8 +173,17 @@ document.querySelectorAll('.lock').forEach(btn=>{
     } else {
       btn.textContent = 'Sperren';
     }
-    calculate();
+    const targetId = btn.getAttribute('data-target');
+    if(targetId){
+      const sel = document.getElementById(targetId);
+      if(sel){ sel.disabled = btn.classList.contains('locked'); }
+    }
   });
+});
+
+// Auto-calc when ISO changes (unless both shutter & aperture locked result still shown)
+document.getElementById('iso').addEventListener('change',()=>{
+  calculate();
 });
 
 function shutterToSec(s){
@@ -199,38 +218,45 @@ function calculate(){
 
   const evScene=ev100+Math.log2(iso/100);
 
-  const lockedISO=document.getElementById('lock-iso').classList.contains('locked');
   const lockedShutter=document.getElementById('lock-shutter').classList.contains('locked');
   const lockedAperture=document.getElementById('lock-aperture').classList.contains('locked');
 
   let html="<h3>Ergebnis</h3>";
 
-  if(lockedISO && lockedShutter && !lockedAperture){
-    let N = Math.sqrt(shutter * Math.pow(2, evScene));
-    let nearest = apertureOptions.reduce((prev,curr)=>Math.abs(curr-N)<Math.abs(prev-N)?curr:prev);
-    document.getElementById('aperture').value = nearest;
-    let evSet=evFromSettings(nearest,shutter);
-    let diff=evScene-evSet;
-    let stops=roundStops(diff);
-    html += `<p>Empfohlene Blende: f/${nearest} (${stops>0?ndLabel(stops):"kein ND nötig"})</p>`;
-  } else if(lockedISO && lockedAperture && !lockedShutter){
-    let t = (aperture*aperture)/Math.pow(2, evScene);
-    let nearest = shutterOptions.reduce((prev,curr)=>Math.abs(shutterToSec(curr)-t)<Math.abs(shutterToSec(prev)-t)?curr:prev);
-    document.getElementById('shutter').value = nearest;
-    let evSet=evFromSettings(aperture,shutterToSec(nearest));
-    let diff=evScene-evSet;
-    let stops=roundStops(diff);
-    html += `<p>Empfohlene Verschlusszeit: ${nearest} (${stops>0?ndLabel(stops):"kein ND nötig"})</p>`;
-  } else if(lockedShutter && lockedAperture && !lockedISO){
+  if(lockedShutter && lockedAperture){
     let evSet=evFromSettings(aperture,shutter);
     let diff=evScene-evSet;
     let stops=roundStops(diff);
     html += `<p>Benötigter ND: ${stops>0?ndLabel(stops):"kein ND nötig"}</p>`;
+  } else if(lockedShutter && !lockedAperture){
+    // Solve for aperture N = sqrt(t * 2^{EVscene})
+    let neededAperture = Math.sqrt(shutter * Math.pow(2, evScene));
+    // Choose nearest from list
+    let nearest = apertureOptions.reduce((prev,curr)=>Math.abs(curr-neededAperture)<Math.abs(prev-neededAperture)?curr:prev);
+    document.getElementById('aperture').value = nearest;
+    aperture = nearest;
+    let evSet=evFromSettings(aperture,shutter);
+    let diff=evScene-evSet; // positive diff => need ND
+    let stops=roundStops(diff);
+    html += `<p>Empfohlene Blende: f/${aperture} (${stops>0?ndLabel(stops):'kein ND nötig'})</p>`;
+  } else if(!lockedShutter && lockedAperture){
+    // Solve for shutter t = (N^2)/2^{EVscene}
+    let neededShutter = (aperture*aperture)/Math.pow(2, evScene);
+    // Find nearest shutter speed
+    let nearest = shutterOptions.reduce((prev,curr)=>{
+      return Math.abs(shutterToSec(curr)-neededShutter) < Math.abs(shutterToSec(prev)-neededShutter) ? curr : prev;
+    });
+    document.getElementById('shutter').value = nearest;
+    shutter = shutterToSec(nearest);
+    let evSet=evFromSettings(aperture,shutter);
+    let diff=evScene-evSet;
+    let stops=roundStops(diff);
+    html += `<p>Empfohlene Verschlusszeit: ${nearest} (${stops>0?ndLabel(stops):'kein ND nötig'})</p>`;
   } else {
     let evSet=evFromSettings(aperture,shutter);
     let diff=evScene-evSet;
     let stops=roundStops(diff);
-    html += `<p>EV Szene: ${evScene.toFixed(2)}, EV Settings: ${evSet.toFixed(2)}<br>Benötigter ND: ${stops>0?ndLabel(stops):"kein ND nötig"}</p>`;
+    html += `<p>Berechnung basierend auf aktuellen Einstellungen.<br>Benötigter ND: ${stops>0?ndLabel(stops):"kein ND nötig"}</p>`;
   }
 
   document.getElementById('result').innerHTML=html;
