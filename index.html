@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ND-Filter Rechner</title>
   <style>
     body {
@@ -10,25 +11,19 @@
       background:#1e1e1e;
       color:#e0e0e0;
     }
+        .container { max-width: 860px; margin:0 auto; padding:0 12px; }
+        header { margin-bottom:24px; }
+        header h2 { margin:0 0 4px; font-size:clamp(1.6rem,4.5vw,2.2rem); }
+        header p { margin:0; color:#b5b5b5; font-size:.95rem; }
     h2 { margin-bottom: 1em; color:#fff; }
     
-    .row {
-      margin-bottom: 15px;
-      display:flex;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    label {
-      width: 120px;
-      min-width:120px;
-      margin-bottom:5px;
-    }
-    select, button {
-      padding: 10px 12px;
-      border-radius:6px;
-      border:none;
-      font-size:14px;
-    }
+    .rows { display:grid; gap:18px 20px; }
+    .row { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .input-line { display:flex; align-items:stretch; gap:10px; flex:1 1 auto; min-width:240px; }
+  .input-line select { flex:1 1 auto; }
+  .input-line .lock { margin-left:0; }
+    label { width:140px; min-width:140px; margin:0; font-weight:600; letter-spacing:.5px; font-size:.85rem; text-transform:uppercase; color:#cfcfcf; }
+    select, button { padding: 12px 14px; border-radius:8px; border:none; font-size:14px; }
     select {
       background:#2c2c2c;
       color:#e0e0e0;
@@ -38,22 +33,28 @@
       background:#3a3a3a;
       color:#fff;
       cursor:pointer;
-      transition:background .2s;
+      transition:background .2s, transform .15s;
       margin-left:8px;
+      min-height:46px;
+      font-weight:600;
     }
     button:hover { background:#555; }
+    button:active { transform:translateY(1px); }
+    button:focus-visible { outline:2px solid #7fb346; outline-offset:2px; }
     .lock {
       cursor:pointer;
       padding:5px 10px;
       margin-left:8px;
       border-radius:6px;
       border:1px solid #666;
+      flex:0 0 auto;
     }
     .lock.locked {
       background:#4A573E;
       color:#fff;
       border-color:#4A573E;
     }
+    .lock:focus-visible { outline:2px solid #9dd35a; outline-offset:2px; }
     .result {
       margin-top:25px;
       padding:15px;
@@ -65,27 +66,30 @@
     li { margin-bottom:4px; }
 
     /* Mobile Styles */
-    @media (max-width:600px){
-      .row {
-        flex-direction:column;
-        align-items:flex-start;
-      }
-      label {
-        width:100%;
-      }
-      select, button {
-        width:100%;
-        margin:5px 0;
-      }
-      button.lock {
-        width:100%;
-      }
+    @media (max-width:760px){
+      .rows { gap:16px 14px; }
+      label { width:120px; min-width:120px; }
+    }
+    @media (max-width:560px){
+      .rows { gap:22px; }
+      .row { flex-direction:column; align-items:stretch; gap:10px; }
+      label { width:100%; min-width:0; }
+      .row > select, .row > button { width:100%; margin-left:0; }
+      .input-line { flex-direction:row; width:100%; }
+      .input-line select { flex:1 1 auto; }
+      .input-line .lock { width:auto; flex:0 0 auto; }
+      button { min-height:50px; }
     }
   </style>
 </head>
 <body>
-  <h2>ND-Filter Rechner</h2>
+  <div class="container">
+    <header>
+      <h2>ND-Filter Rechner</h2>
+      <p>Berechne schnell den benötigten ND-Filter für die Szene.</p>
+    </header>
   
+  <div class="rows">
   <div class="row">
     <label>ISO (Film):</label>
     <select id="iso">
@@ -98,14 +102,18 @@
 
   <div class="row">
     <label>Verschluss:</label>
-    <select id="shutter"></select>
-    <button class="lock" id="lock-shutter">Sperren</button>
+    <div class="input-line">
+      <select id="shutter"></select>
+      <button class="lock" id="lock-shutter">Sperren</button>
+    </div>
   </div>
 
   <div class="row">
     <label>Blende:</label>
-    <select id="aperture"></select>
-    <button class="lock" id="lock-aperture">Sperren</button>
+    <div class="input-line">
+      <select id="aperture"></select>
+      <button class="lock" id="lock-aperture">Sperren</button>
+    </div>
   </div>
 
   <div class="row">
@@ -123,8 +131,10 @@
   </div>
 
   <button onclick="calculate()">Berechnen</button>
+  </div>
 
   <div class="result" id="result"></div>
+  </div>
 
 <script>
 const shutterOptions = ["1/1000","1/500","1/250","1/125","1/60","1/30","1/15","1/8","1/4","1/2","1"];
