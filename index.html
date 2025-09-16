@@ -23,7 +23,7 @@
   .input-line select { flex:1 1 auto; }
   .input-line .lock { margin-left:0; }
     label { width:140px; min-width:140px; margin:0; font-weight:600; letter-spacing:.5px; font-size:.85rem; text-transform:uppercase; color:#cfcfcf; }
-    select, button { padding: 24px 14px; border-radius:8px; border:none; font-size:14px; }
+    select, button { padding: 12px 14px; border-radius:8px; border:none; font-size:14px; }
     select {
       background:#2c2c2c;
       color:#e0e0e0;
@@ -45,6 +45,7 @@
       padding:5px 10px;
       margin-left:8px;
       border-radius:6px;
+      border:1px solid #666;
       flex:0 0 auto;
     }
     .lock.locked {
@@ -95,6 +96,7 @@
       <option value="400">400</option>
       <option value="800">800</option>
     </select>
+    <button class="lock" id="lock-iso">Sperren</button>
   </div>
 
   <div class="row">
